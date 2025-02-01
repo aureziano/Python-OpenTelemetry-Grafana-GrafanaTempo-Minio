@@ -7,9 +7,10 @@ datasources:
     jsonData:
       httpMethod: GET
       tracesToLogs:
-        datasourceUid: "loki"
         tags: ["job", "instance"]
-        mappedTags: [{ key: "service.name", value: "service" }]
+        mappedTags:
+          - key: "service.name"
+            value: "service"
         filterByTraceID: true
         spanStartTimeShift: "-1h"
         spanEndTimeShift: "1h"
