@@ -1,0 +1,130 @@
+networks:
+  monitoring:
+    driver: bridge
+
+services:
+
+  minio:
+    image: minio/minio
+    container_name: minio
+    ports:
+      - "9002:9000"  # Porta alterada externamente
+      - "9001:9001"  # Console do Minio
+    volumes:
+      - minio-data:/data
+    environment:
+      - MINIO_ROOT_USER=root
+      - MINIO_ROOT_PASSWORD=passminio
+      - MINIO_DEFAULT_BUCKETS=tempo-data
+    command: server --console-address ":9001" /data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - monitoring   
+
+  minio-create-buckets:
+    image: minio/mc
+    container_name: minio_mc
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      until /usr/bin/mc alias set myminio http://minio:9000 root passminio; do sleep 1; done;
+      until /usr/bin/mc mb myminio/tempo-data; do sleep 1; done;
+      exit 0;
+      "
+    networks:
+      - monitoring  
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: minio-create-buckets
+    ports:
+      - "3005:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    networks:
+      - monitoring
+
+  tempo:
+    image: grafana/tempo:latest
+    container_name: tempo
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    volumes:
+      - ./tempo/tempo.yaml:/etc/tempo.yaml:ro
+      - tempo-data:/tmp/tempo
+    ports:
+      - "3200:3200" # Tempo escuta na 3200, não na 4317
+      - "9095:9095"
+      # - "55680:55680" # otlp grpc
+      # - "55681:55681" # otlp http
+    depends_on:
+      - minio-create-buckets
+    # healthcheck:
+    #   test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3200/status || exit 1"]
+    #   interval: 20s
+    #   timeout: 15s
+    #   retries: 3
+    #   # start_period: 45s
+    user: "10001:10001"
+    networks:
+      - monitoring
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: otel-collector
+    restart: unless-stopped
+    command: [ "--config=/etc/otel-collector-config.yaml" ]
+    volumes:
+      - ./otel-collector/otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    ports:
+      - "4317:4317" # Otel Collector recebe gRPC aqui
+      - "4318:4318"
+      # - "8888:8888"
+    environment:
+      - TEMPO_ENDPOINT=http://tempo:3200 # Agora correto
+    # healthcheck:
+    #   test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4317/" ]
+    #   interval: 10s
+    #   timeout: 5s
+    #   retries: 5
+    depends_on:
+      - tempo
+        # condition: service_healthy
+    networks:
+      - monitoring
+
+  python-api:
+    build: ./python-api
+    container_name: python-api
+    ports:
+      - "5000:5000"
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_SERVICE_NAME=python-api
+    depends_on:
+      - otel-collector
+
+    networks:
+      - monitoring
+
+volumes:
+  grafana-data:
+    driver: local
+  minio-data:
+    driver: local  
+  tempo-data:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./data
+      o: bind
