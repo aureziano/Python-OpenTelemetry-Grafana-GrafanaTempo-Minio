@@ -120,8 +120,16 @@ services:
 volumes:
   grafana-data:
     driver: local
+    driver_opts:
+      type: none
+      device: ./grafana-data
+      o: bind
   minio-data:
     driver: local  
+    driver_opts:
+      type: none
+      device: ./minio-data
+      o: bind
   tempo-data:
     driver: local
     driver_opts:

@@ -1,1 +1,4 @@
+# Docker
 /data
+/grafana-data
+/minio-data
