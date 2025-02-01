@@ -1,7 +1,4 @@
-Aqui está um README.md em markdown com badges e sumário para o seu projeto:
-
-```markdown
-# Monitoramento com OpenTelemetry, Grafana e MinIO
+# Monitoramento de Api Python com OpenTelemetry, Grafana e MinIO
 
 [![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![Flask](https://img.shields.io/badge/Flask-2.0+-green.svg)](https://flask.palletsprojects.com/)
@@ -90,9 +87,4 @@ Contribuições são bem-vindas! Por favor, sinta-se à vontade para submeter um
 ## Licença
 
 Este projeto está licenciado sob a [Licença MIT](LICENSE).
-```
 
-Este README fornece uma visão geral do projeto, instruções de configuração e uso, além de incluir badges para as principais tecnologias utilizadas. Você pode personalizar ainda mais conforme necessário, adicionando seções específicas do seu projeto ou detalhando mais as configurações e usos.
-
----
-Resposta do Perplexity: pplx.ai/share
