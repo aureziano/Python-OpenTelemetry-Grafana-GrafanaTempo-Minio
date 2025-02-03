@@ -1,4 +1,4 @@
 # Docker
-/data
+/tempo-data
 /grafana-data
 /minio-data
